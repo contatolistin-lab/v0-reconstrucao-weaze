@@ -173,7 +173,7 @@ function MemberCard({
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-sm text-muted-foreground truncate">{member.email}</span>
-          <span className="flex items-center gap-1 text-xs" className={statusConfig[member.status].class}>
+          <span className={`flex items-center gap-1 text-xs ${statusConfig[member.status].class}`}>
             <StatusIcon className="h-3 w-3" />
             {statusConfig[member.status].label}
           </span>

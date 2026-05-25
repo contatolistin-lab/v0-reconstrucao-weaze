@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
+import { useTenant } from '@/contexts/TenantContext'
 import { useState } from 'react'
 
 const mainNavItems = [
@@ -47,8 +48,13 @@ const bottomNavItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { user, logout, tenant } = useAuth()
+  const { user, logout } = useAuth()
+  const { tenant } = useTenant()
   const [collapsed, setCollapsed] = useState(false)
+  const userMeta = user?.user_metadata as Record<string, unknown> | undefined
+  const userName = (userMeta?.name as string) || user?.email?.split('@')[0] || 'Usuário'
+  const userAvatar = userMeta?.avatar_url as string | undefined
+  const userUsername = userMeta?.username as string | undefined
 
   return (
     <aside
@@ -61,9 +67,9 @@ export function Sidebar() {
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
         {!collapsed && (
           <Link href="/app" className="flex items-center gap-2">
-            {tenant?.logo ? (
+            {tenant?.logo_url ? (
               <img
-                src={tenant.logo}
+                src={tenant.logo_url}
                 alt={tenant.name}
                 className="h-8 w-8 rounded-lg object-cover"
               />
@@ -150,24 +156,26 @@ export function Sidebar() {
           )}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-primary/30">
-            {user?.avatar ? (
+            {userAvatar ? (
               <img
-                src={user.avatar}
-                alt={user.name}
+                src={userAvatar}
+                alt={userName}
                 className="h-full w-full object-cover"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-accent text-sm font-bold text-white">
-                {user?.name.charAt(0) || 'U'}
+                {userName.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
           </div>
           {!collapsed && (
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium">{user?.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                @{user?.username}
-              </p>
+              <p className="truncate text-sm font-medium">{userName}</p>
+              {userUsername && (
+                <p className="truncate text-xs text-muted-foreground">
+                  @{userUsername}
+                </p>
+              )}
             </div>
           )}
           {!collapsed && (

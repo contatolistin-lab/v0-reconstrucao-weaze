@@ -68,12 +68,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }, 20000)
 
     try {
-      const { data: membershipData } = await supabase
+      const { data: membershipData } = await (supabase as any)
         .from('memberships')
         .select('*')
         .eq('user_id', user.id)
 
-      if (!membershipData || membershipData.length === 0) {
+      const membershipsList = membershipData || []
+
+      if (membershipsList.length === 0) {
         setTenant(null)
         setTenants([])
         setMemberships([])
@@ -84,13 +86,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setMemberships(membershipData)
+      setMemberships(membershipsList)
 
-      const blockedMembership = membershipData.find(m => !m.is_active && m.role === 'member')
-      setBlocked(!!blockedMembership)
+      const blockedMem = membershipsList.find((m: any) => !m.is_active && m.role === 'member')
+      setBlocked(!!blockedMem)
 
-      const tenantIds = membershipData.map(m => m.tenant_id)
-      const { data: tenantData } = await supabase
+      const tenantIds = membershipsList.map((m: any) => m.tenant_id)
+      const { data: tenantData } = await (supabase as any)
         .from('tenants')
         .select('*')
         .in('id', tenantIds)
@@ -104,18 +106,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         let selected: TenantData | null = null
         
         if (pendingSlug) {
-          selected = tenantData.find(t => t.slug === pendingSlug) || null
+          selected = tenantData.find((t: any) => t.slug === pendingSlug) || null
           localStorage.removeItem('weaze:pending_tenant_slug')
         }
         
         if (!selected && lastActive) {
-          selected = tenantData.find(t => t.id === lastActive) || null
+          selected = tenantData.find((t: any) => t.id === lastActive) || null
         }
         
         if (!selected) {
-          const ownerTenant = membershipData.find(m => m.role === 'owner' || m.role === 'admin')
+          const ownerTenant = membershipsList.find((m: any) => m.role === 'owner' || m.role === 'admin')
           if (ownerTenant) {
-            selected = tenantData.find(t => t.id === ownerTenant.tenant_id) || tenantData[0]
+            selected = tenantData.find((t: any) => t.id === ownerTenant.tenant_id) || tenantData[0]
           } else {
             selected = tenantData[0]
           }

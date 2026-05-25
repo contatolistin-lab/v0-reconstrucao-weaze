@@ -6,7 +6,14 @@ import { Home, Users, PlusSquare, MessageCircle, User, BarChart3, Bell } from 'l
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
 
-const b2bNavItems = [
+interface NavItem {
+  href: string
+  icon: React.ElementType
+  label: string
+  special?: boolean
+}
+
+const b2bNavItems: NavItem[] = [
   { href: '/app', icon: Home, label: 'Feed' },
   { href: '/app/groups', icon: Users, label: 'Grupos' },
   { href: '/app/create', icon: PlusSquare, label: 'Criar', special: true },
@@ -14,7 +21,7 @@ const b2bNavItems = [
   { href: '/app/metrics', icon: BarChart3, label: 'Métricas' },
 ]
 
-const b2cNavItems = [
+const b2cNavItems: NavItem[] = [
   { href: '/app', icon: Home, label: 'Feed' },
   { href: '/app/conversas', icon: MessageCircle, label: 'Fórum' },
   { href: '/app/groups', icon: Users, label: 'Grupos' },

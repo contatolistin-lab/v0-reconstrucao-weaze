@@ -6,33 +6,31 @@ import { ChatView } from "@/components/messages/chat-view"
 import { useIsMobile } from "@/components/ui/use-mobile"
 
 export default function MessagesPage() {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(undefined)
   const isMobile = useIsMobile()
 
-  // Mobile: show list or chat based on selection
   if (isMobile) {
     if (selectedConversationId) {
       return (
         <ChatView
           conversationId={selectedConversationId}
-          onBack={() => setSelectedConversationId(null)}
+          onBack={() => setSelectedConversationId(undefined)}
         />
       )
     }
     return (
       <ConversationList
-        onSelectConversation={setSelectedConversationId}
+        onSelect={setSelectedConversationId as (id: string | undefined) => void}
         selectedId={selectedConversationId}
       />
     )
   }
 
-  // Desktop: side by side
   return (
     <div className="flex h-full">
       <div className="w-80 border-r border-border flex-shrink-0">
         <ConversationList
-          onSelectConversation={setSelectedConversationId}
+          onSelect={setSelectedConversationId as (id: string | undefined) => void}
           selectedId={selectedConversationId}
         />
       </div>

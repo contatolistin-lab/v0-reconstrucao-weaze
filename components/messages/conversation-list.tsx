@@ -80,7 +80,7 @@ function formatTimestamp(date: Date): string {
 }
 
 interface ConversationListProps {
-  onSelect: (id: string) => void
+  onSelect: (id: string | undefined) => void
   selectedId?: string
 }
 

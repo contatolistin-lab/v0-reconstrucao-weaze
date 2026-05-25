@@ -1,30 +1,72 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
 export type AppRole = 'admin' | 'b2b' | 'b2c' | null
+export type UserRole = 'admin' | 'creator' | 'member' | 'guest'
+
+export interface CompatUser {
+  id: string
+  email: string
+  name: string
+  username: string
+  avatar?: string
+  role: UserRole
+  tenantId?: string
+  points: number
+  level: number
+  badges: string[]
+  createdAt: Date
+}
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   initializing: boolean
+  isAuthenticated: boolean
+  isLoading: boolean
   appRole: AppRole
   isB2B: boolean
   isB2C: boolean
   isAdmin: boolean
   redirectTo: string | null
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  signup: (data: { email: string; password: string; name: string; username: string }) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
+  logout: () => void
   clearRedirect: () => void
   refreshAppRole: () => Promise<void>
+}
+
+const mockUsers: Record<string, { password: string; user: CompatUser }> = {
+  'admin@weaze.com': {
+    password: 'admin123',
+    user: {
+      id: '1', email: 'admin@weaze.com', name: 'Admin WEAZE', username: 'admin',
+      role: 'admin', points: 50000, level: 25, badges: ['founder', 'top-creator', 'verified'], createdAt: new Date('2024-01-01'),
+    },
+  },
+  'creator@demo.com': {
+    password: 'creator123',
+    user: {
+      id: '2', email: 'creator@demo.com', name: 'Maria Silva', username: 'mariasilva',
+      role: 'creator', tenantId: 'tenant-1', points: 15420, level: 12, badges: ['early-adopter', 'content-king'], createdAt: new Date('2024-03-15'),
+    },
+  },
+  'member@demo.com': {
+    password: 'member123',
+    user: {
+      id: '3', email: 'member@demo.com', name: 'João Pedro', username: 'joaopedro',
+      role: 'member', tenantId: 'tenant-1', points: 3250, level: 5, badges: ['newcomer'], createdAt: new Date('2024-06-01'),
+    },
+  },
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [initializing, setInitializing] = useState(true)
@@ -34,24 +76,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initCalled = useRef(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const determineAppRole = useCallback(async (userId: string) => {
-    if (!isSupabaseConfigured || !supabase) return 'b2c' as AppRole
+  const determineAppRole = useCallback(async (userId: string): Promise<AppRole> => {
+    if (!isSupabaseConfigured || !supabase) return 'b2c'
     try {
-      const { data: memberships } = await supabase
+      const { data: memberships } = await (supabase as any)
         .from('memberships')
         .select('role')
         .eq('user_id', userId)
       
       if (memberships && memberships.length > 0) {
-        const roles = memberships.map(m => m.role)
-        if (roles.includes('owner') || roles.includes('admin')) return 'b2b' as AppRole
+        const roles = memberships.map((m: { role: string }) => m.role)
+        if (roles.includes('owner') || roles.includes('admin')) return 'b2b'
       }
 
-      const { data: { user_metadata } } = await supabase.auth.getUser()
-      if (user_metadata?.account_type === 'b2b') return 'b2b' as AppRole
-      return 'b2c' as AppRole
+      const { data: userData } = await supabase.auth.getUser()
+      const meta = userData?.user?.user_metadata as Record<string, unknown> | undefined
+      if (meta?.account_type === 'b2b') return 'b2b'
+      return 'b2c'
     } catch {
-      return 'b2c' as AppRole
+      return 'b2c'
     }
   }, [])
 
@@ -77,20 +120,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session.user)
         const role = await determineAppRole(session.user.id)
         setAppRole(role)
-        setLoading(false)
-        setInitializing(false)
-      } else {
-        setUser(null)
-        setAppRole(null)
-        setLoading(false)
-        setInitializing(false)
       }
     } catch {
-      setUser(null)
-      setAppRole(null)
+      // silent
+    } finally {
       setLoading(false)
       setInitializing(false)
-    } finally {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [determineAppRole])
@@ -129,14 +164,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [initAuth, determineAppRole])
 
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) return { success: false, error: error.message }
+      return { success: true }
+    }
+    // Mock fallback
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 800))
+    const mockUser = mockUsers[email.toLowerCase()]
+    if (!mockUser || mockUser.password !== password) {
+      setLoading(false)
+      return { success: false, error: 'Email ou senha inválidos' }
+    }
+    setAppRole(mockUser.user.role === 'admin' ? 'admin' : mockUser.user.role === 'creator' ? 'b2b' : 'b2c')
+    setLoading(false)
+    return { success: true }
+  }, [])
+
+  const signup = useCallback(async (data: { email: string; password: string; name: string; username: string }): Promise<{ success: boolean; error?: string }> => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: { data: { name: data.name, username: data.username, account_type: 'b2c' } },
+      })
+      if (error) return { success: false, error: error.message }
+      return { success: true }
+    }
+    // Mock fallback
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 1000))
+    if (mockUsers[data.email.toLowerCase()]) {
+      setLoading(false)
+      return { success: false, error: 'Este email já está cadastrado' }
+    }
+    setAppRole('b2c')
+    setLoading(false)
+    return { success: true }
+  }, [])
+
   const signOut = useCallback(async () => {
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut()
     }
     setUser(null)
     setAppRole(null)
-    router.push('/login')
-  }, [router])
+  }, [])
+
+  const logout = useCallback(() => {
+    signOut()
+  }, [signOut])
 
   const refreshAppRole = useCallback(async () => {
     if (user) {
@@ -153,12 +232,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         loading,
         initializing,
+        isAuthenticated: !!user,
+        isLoading: loading,
+        login,
+        signup,
+        signOut,
+        logout,
         appRole,
         isB2B: appRole === 'b2b' || appRole === 'admin',
         isB2C: appRole === 'b2c',
         isAdmin: appRole === 'admin',
         redirectTo,
-        signOut,
         clearRedirect,
         refreshAppRole,
       }}
