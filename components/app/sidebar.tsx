@@ -11,7 +11,14 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bell,
+  BarChart3,
+  PlusSquare,
+  UserPlus,
+  Building,
+  User,
+  Video,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
@@ -19,13 +26,22 @@ import { useState } from 'react'
 
 const mainNavItems = [
   { href: '/app', icon: Home, label: 'Feed' },
+  { href: '/app/create', icon: PlusSquare, label: 'Criar Post' },
+  { href: '/app/conversas', icon: MessageCircle, label: 'Conversas' },
   { href: '/app/groups', icon: Users, label: 'Grupos' },
   { href: '/app/messages', icon: MessageCircle, label: 'Mensagens' },
+  { href: '/app/notifications', icon: Bell, label: 'Notificações' },
   { href: '/app/events', icon: Calendar, label: 'Eventos' },
+  { href: '/app/lives', icon: Video, label: 'Lives' },
   { href: '/app/ranking', icon: Trophy, label: 'Ranking' },
+  { href: '/app/metrics', icon: BarChart3, label: 'Métricas' },
+  { href: '/app/members', icon: Users, label: 'Membros' },
+  { href: '/app/requests', icon: UserPlus, label: 'Solicitações' },
+  { href: '/app/communities', icon: Building, label: 'Comunidades' },
 ]
 
 const bottomNavItems = [
+  { href: '/app/profile', icon: User, label: 'Perfil' },
   { href: '/app/settings', icon: Settings, label: 'Configurações' },
 ]
 

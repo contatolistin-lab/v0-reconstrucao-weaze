@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/app/top-bar'
 import { BottomNav } from '@/components/app/bottom-nav'
 import { Sidebar } from '@/components/app/sidebar'
+import { UpdateBanner } from '@/components/UpdateBanner'
 import { useAuth } from '@/lib/auth'
+import { useTenant } from '@/contexts/TenantContext'
 
 export default function AppLayout({
   children,
@@ -13,17 +15,22 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, initializing } = useAuth()
+  const { blocked, loading: tenantLoading } = useTenant()
 
   useEffect(() => {
-    // Redirect to login if not authenticated
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !initializing && !isAuthenticated) {
       router.push('/login')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, isLoading, initializing, router])
 
-  // Show nothing while checking auth
-  if (isLoading || !isAuthenticated) {
+  useEffect(() => {
+    if (blocked) {
+      router.push('/blocked')
+    }
+  }, [blocked, router])
+
+  if (isLoading || initializing || tenantLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -31,20 +38,18 @@ export default function AppLayout({
     )
   }
 
+  if (!isAuthenticated) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Desktop sidebar */}
+      <UpdateBanner />
       <Sidebar />
-
-      {/* Mobile top bar */}
       <TopBar />
-
-      {/* Main content */}
       <main className="h-screen pt-14 pb-16 sm:pb-0 sm:pl-60">
         {children}
       </main>
-
-      {/* Mobile bottom nav */}
       <BottomNav />
     </div>
   )
